@@ -1,0 +1,134 @@
+#include<LiquidCrystal.h>
+LiquidCrystal lcd(8,9,10,11,12,13);
+#define sensor A0
+byte degree[8] =
+{
+0b00011,
+0b00011,
+0b00000,
+0b00000,
+0b00000,
+0b00000,
+0b00000,
+0b00000
+};
+
+
+
+
+#include <SoftwareSerial.h>
+
+//Create software serial object to communicate with SIM800L
+SoftwareSerial mySerial(5,4); //SIM800L Tx & Rx is connected to Arduino #5 & #4
+
+
+
+const int buzzer = 7;
+
+
+
+void setup()
+{
+lcd.begin(16,2);
+lcd.createChar(1, degree);
+lcd.setCursor(0,0);
+lcd.print("   Overheating ");
+lcd.setCursor(0,1);
+lcd.print("    Detector  ");
+delay(2000);
+lcd.clear();
+
+
+
+pinMode(buzzer,OUTPUT);
+Serial.begin(9600);
+
+
+}
+void loop()
+{
+/*---------Temperature-------*/
+float reading=analogRead(sensor);
+float temperature=reading*(5.0/1023.0)*100;
+delay(10);
+
+
+
+int backLIGHT = 3;
+pinMode(backLIGHT,LOW);
+digitalWrite(backLIGHT,LOW);
+ 
+
+
+
+/*------Display Result------*/
+lcd.clear();
+lcd.setCursor(2,0);
+lcd.print("Temperature");
+lcd.setCursor(4,1);
+lcd.print(temperature);
+lcd.write(1);
+lcd.print("C");
+delay(1000);
+
+
+
+
+
+
+
+
+//Begin serial communication with Arduino and Arduino IDE (Serial Monitor)
+  Serial.begin(9600);
+  
+  //Begin serial communication with Arduino and SIM800L
+  mySerial.begin(9600);
+
+  Serial.println("Initializing..."); 
+  delay(1000);
+
+  mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+  updateSerial();
+
+  for(int i=1;i<2;i++)
+  {
+    if(temperature >= 100.00)
+    {
+  mySerial.println("AT+CMGF=1"); // Configuring TEXT mode
+  updateSerial();
+  mySerial.println("AT+CMGS=\"+919370211383\"");//phone number to sms
+  updateSerial();
+  mySerial.print("Overheating Detected!!"); //text content
+  updateSerial();
+  mySerial.write(26);
+
+
+  delay(1);
+  tone(buzzer,2000);
+  delay(100);
+    }
+  
+  else {
+    noTone(buzzer);
+  }
+  }
+}
+
+
+
+void updateSerial()
+{
+  delay(500);
+  while (Serial.available()) 
+  {
+    mySerial.write(Serial.read());//Forward what Serial received to Software Serial Port
+  }
+  while(mySerial.available()) 
+  {
+    Serial.write(mySerial.read());//Forward what Software Serial received to Serial Port
+  }
+
+
+
+
+}
